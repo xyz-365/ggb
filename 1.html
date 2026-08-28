@@ -3,7 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <title>GGB Demo</title>
-    <!-- GeoGebra CDN -->
     <script src="https://cdn.geogebra.org/apps/deployggb.js"></script>
 <script>
 function capitalise([first,...rest]) {
@@ -21,120 +20,12 @@ function clean_attribute(v) {
     };
     return Object.prototype.hasOwnProperty.call(map,v) ? map[v] : v;
 }
-function split_comma(v){
-    return v.split(/\s*,\s*/);
-}
-function enum_value(list,val){
-    const idx = list.indexOf(val);
-    return idx>=0 ? idx : val;
-}
-function map_value(obj,key){
-    return obj.hasOwnProperty(key) ? obj[key] : key;
-}
-
-const modeMap = {
-    "move": 0,
-    "point": 1,
-    "join": 2,
-    "parallel": 3,
-    "orthogonal": 4,
-    "intersect": 5,
-    "delete": 6,
-    "vector": 7,
-    "line bisector": 8,
-    "angular bisector": 9,
-    "circle two points": 10,
-    "circle three points": 11,
-    "conic five points": 12,
-    "tangents":13,
-    "relation":14,
-    "segment":15,
-    "polygon":16,
-    "text":17,
-    "ray":18,
-    "midpoint":19,
-    "circle arc three points":20,
-    "circle sector three points":21,
-    "circumcircle arc three points":22,
-    "circumcircle sector three points":23,
-    "semicircle":24,
-    "slider":25,
-    "image":26,
-    "show hide object":27,
-    "show hide label":28,
-    "mirror at point":29,
-    "mirror at line":30,
-    "translate by vector":31,
-    "rotate by angle":32,
-    "dilate from point":33,
-    "circle point radius":34,
-    "copy visual style":35,
-    "angle":36,
-    "vector from point":37,
-    "distance":38,
-    "move rotate":39,
-    "translateview":40,
-    "zoom in":41,
-    "zoom out":42,
-    "selection listener":43,
-    "polar diameter":44,
-    "segment fixed":45,
-    "angle fixed":46,
-    "locus":47,
-    "macro":48,
-    "area":49,
-    "slope":50,
-    "regular polygon":51,
-    "show hide checkbox":52,
-    "compasses":53,
-    "mirror at circle":54,
-    "ellipse three points":55,
-    "hyperbola three points":56,
-    "parabola":57,
-    "fitline":58,
-    "record to spreadsheet":59,
-    "button action":60,
-    "textfield action":61,
-    "pen":62,
-    "rigid polygon":64,
-    "polyline":65,
-    "probability calculator":66,
-    "attach / detach":67,
-    "function inspector":68,
-    "intersect two surfaces":69,
-    "vector polygon":70,
-    "create list":71,
-    "complex number":72,
-    "point on object":501
-};
-
-const methodList = [
-    "debug","deleteObject","enable3D","enableCAS","enableLabelDrags","enableRightClick","enableShiftDragZoom",
-    "evalCommand","evalCommandCAS","evalCommandGetLabels","evalXML","exists","exportPDF","exportSVG",
-    "getAlgorithmXML","getAllObjectNames","getBase64","getCASObjectNumber","getCaption","getColor",
-    "getCommandString","getDefinition","getEditorState","getFileJSON","getFilling","getGraphicsOptions",
-    "getGridVisible","getLaTeXBase64","getLaTeXString","getLabelStyle","getLabelVisible","getLayer",
-    "getLineStyle","getLineThickness","getListValue","getMode","getObjectName","getObjectNumber","getObjectType",
-    "getPNGBase64","getPerspectiveXML","getPointSize","getPointStyle","getScreenshotBase64","getValue",
-    "getValueString","getVersion","getVisible","getXML","getXcoord","getYcoord","getZcoord",
-    "hideCursorWhenDragging","isAnimationRunning","isDefined","isIndependent","isMoveable",
-    "newConstruction","openFile","recalculateEnvironments","redo","refreshViews",
-    "registerAddListener","registerClearListener","registerClickListener","registerClientListener",
-    "registerObjectClickListener","registerObjectUpdateListener","registerRemoveListener",
-    "registerRenameListener","registerStoreUndoListener","registerUpdateListener",
-    "remove","renameObject","reset","setAlgebraOptions","setAnimating","setAnimationSpeed",
-    "setAuxiliary","setAxesVisible","setAxisLabels","setAxisSteps","setAxisUnits","setBase64",
-    "setCaption","setColor","setCoords","setCorner","setCursor","setDialogsVisible","setFilling",
-    "setFixed","setGridVisible","setLabelStyle","setLabelVisible","setLayer","setLineStyle",
-    "setLineThickness","setPerspective","setPointSize","setPointStyle","setRepaintingEnabled",
-    "setRounding","setToolMode","setTrace","setVisible","setXML","showAxes","showToolBar",
-    "showToolBarHelp","undo"
-];
 
 class GeogebraApplet extends HTMLElement {
     constructor(){
         super();
-        this.applet = null;
+        this.wrapper = null;
+        this.api = null; // 真实GGB API对象
     }
     connectedCallback(){
         const attrs = {};
@@ -155,20 +46,27 @@ class GeogebraApplet extends HTMLElement {
         this.innerHTML = "";
         const div = document.createElement("div");
         this.appendChild(div);
-        this.applet = new GGBApplet(params, true);
-        this.applet.inject(div);
+        this.wrapper = new GGBApplet(params, true);
+        this.wrapper.inject(div);
+        // 等待内核就绪，获取真实api实例
+        const poll = ()=>{
+            const obj = this.wrapper.getAppletObject();
+            if(obj){
+                this.api = obj;
+            }else{
+                setTimeout(poll, 100);
+            }
+        };
+        poll();
     }
 }
-
-// ✅ 这里：geogebra-applet，中间是键盘普通减号 ASCII 45
+// ASCII普通减号 geogebra-applet
 customElements.define('geogebra-applet', GeogebraApplet);
 </script>
 </head>
 <body>
 
-<!-- ✅ HTML标签同样 geogebra-applet，普通ASCII减号 -->
 <geogebra-applet width="800" height="500"></geogebra-applet>
-
 <button id="btn">JS动态画圆</button>
 
 <script>
@@ -176,7 +74,11 @@ const btn = document.querySelector("#btn");
 const ggbEl = document.querySelector("geogebra-applet");
 
 btn.onclick = function(){
-    const api = ggbEl.applet;
+    if(!ggbEl.api){
+        alert("GeoGebra还未加载完成，请稍后点击");
+        return;
+    }
+    const api = ggbEl.api;
     api.evalCommand("A=(-2,0)");
     api.evalCommand("B=(2,0)");
     api.evalCommand("C=(0,3)");
