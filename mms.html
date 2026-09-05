@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>方向 · 格数 → GGB 控制</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: #0f172a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            padding: 20px;
+        }
+
+        .app-wrapper {
+            max-width: 1100px;
+            width: 100%;
+            display: grid;
+            grid-template-columns: 340px 1fr;
+            gap: 24px;
+            align-items: start;
+            margin: 0 auto;
+        }
+
+        .control-panel {
+            background: linear-gradient(145deg, #1e293b, #0f172a);
+            border-radius: 32px;
+            padding: 28px 24px 30px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
+            border: 1px solid #334155;
+        }
+
+        .panel-header {
+            text-align: center;
+            margin-bottom: 22px;
+        }
+        .panel-icon {
+            font-size: 2rem;
+            display: block;
+        }
+        .panel-title {
+            color: #e2e8f0;
+            font-size: 1rem;
+            font-weight: 400;
+            letter-spacing: 2px;
+            margin-top: 4px;
+            opacity: 0.8;
+        }
+
+        .command-row {
+            background: rgba(30, 41, 59, 0.6);
+            border-radius: 14px;
+            padding: 12px 14px;
+            margin-bottom: 10px;
+            border: 1px solid #334155;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            transition: all 0.3s;
+        }
+        .command-row.active {
+            border-color: #f59e0b;
+            background: rgba(245, 158, 11, 0.10);
+        }
+        .command-row.synced {
+            border-color: #22c55e;
+            background: rgba(34, 197, 94, 0.06);
+        }
+
+        .command-index {
+            color: #64748b;
+            font-weight: 600;
+            font-size: 0.8rem;
+            min-width: 24px;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex: 1;
+            flex-wrap: wrap;
+        }
+        .control-group label {
+            color: #94a3b8;
+            font-size: 0.7rem;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            min-width: 28px;
+        }
+
+        .direction-select {
+            background: #0f172a;
+            color: #e2e8f0;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 5px 24px 5px 10px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            cursor: pointer;
+            outline: none;
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2394a3b8'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 8px center;
+            min-width: 60px;
+            transition: border-color 0.2s;
+        }
+        .direction-select:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+        }
+        .direction-select option {
+            background: #1e293b;
+            color: #e2e8f0;
+        }
+
+        .grid-input {
+            width: 60px;
+            padding: 5px 6px;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            text-align: center;
+            background: #0f172a;
+            color: #e2e8f0;
+            outline: none;
+            font-family: inherit;
+            transition: border-color 0.2s;
+        }
+        .grid-input:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+        }
+
+        .command-status {
+            font-size: 0.9rem;
+            min-width: 22px;
+            text-align: center;
+            color: #64748b;
+        }
+        .command-status.synced {
+            color: #22c55e;
+        }
+
+        .control-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 14px;
+        }
+        .btn {
+            padding: 8px 20px;
+            border: none;
+            border-radius: 40px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.25s;
+            flex: 1;
+        }
+        .btn-sync {
+            background: #3b82f6;
+            color: white;
+            box-shadow: 0 4px 14px rgba(59, 130, 246, 0.35);
+        }
+        .btn-sync:hover:not(:disabled) {
+            background: #2563eb;
+            transform: translateY(-1px);
+        }
+        .btn-sync:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+        .btn-reset {
+            background: #334155;
+            color: #94a3b8;
+            flex: 0.5;
+        }
+        .btn-reset:hover {
+            background: #475569;
+            color: #e2e8f0;
+        }
+
+        .hint-text {
+            text-align: center;
+            color: #64748b;
+            font-size: 0.75rem;
+            margin-top: 12px;
+            min-height: 20px;
+        }
+        .hint-text.success {
+            color: #22c55e;
+        }
+        .hint-text.error {
+            color: #ef4444;
+        }
+
+        .ggb-panel {
+            background: #1e293b;
+            border-radius: 32px;
+            overflow: hidden;
+            border: 1px solid #334155;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+            min-height: 500px;
+        }
+        #ggb-container {
+            width: 100%;
+            height: 560px;
+        }
+
+        @media (max-width: 820px) {
+            .app-wrapper {
+                grid-template-columns: 1fr;
+                max-width: 480px;
+            }
+            #ggb-container {
+                height: 400px;
+            }
+        }
+        @media (max-width: 480px) {
+            .control-panel {
+                padding: 16px 12px 18px;
+            }
+            .command-row {
+                padding: 8px 8px;
+                gap: 4px;
+            }
+            .direction-select {
+                min-width: 50px;
+                font-size: 0.7rem;
+                padding: 4px 20px 4px 6px;
+            }
+            .grid-input {
+                width: 48px;
+                font-size: 0.75rem;
+                padding: 4px 4px;
+            }
+            .command-index {
+                font-size: 0.7rem;
+                min-width: 18px;
+            }
+            #ggb-container {
+                height: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-wrapper">
+    <!-- ===== 左侧控制面板 ===== -->
+    <div class="control-panel">
+        <div class="panel-header">
+            <span class="panel-icon">🎮</span>
+            <div class="panel-title">✦ 方向 · 格数 ✦</div>
+        </div>
+
+        <div id="commandContainer">
+            <!-- 第1对 -->
+            <div class="command-row" data-index="0">
+                <span class="command-index">①</span>
+                <div class="control-group">
+                    <label>方向</label>
+                    <select class="direction-select" data-var="方向1">
+                        <option value="顺">顺</option>
+                        <option value="逆" selected>逆</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label>格数</label>
+                    <input type="text" class="grid-input" data-var="v1" value="3" />
+                </div>
+                <span class="command-status" id="status0">⬜</span>
+            </div>
+
+            <!-- 第2对 -->
+            <div class="command-row" data-index="1">
+                <span class="command-index">②</span>
+                <div class="control-group">
+                    <label>方向</label>
+                    <select class="direction-select" data-var="方向2">
+                        <option value="顺">顺</option>
+                        <option value="逆" selected>逆</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label>格数</label>
+                    <input type="text" class="grid-input" data-var="v2" value="2" />
+                </div>
+                <span class="command-status" id="status1">⬜</span>
+            </div>
+
+            <!-- 第3对 -->
+            <div class="command-row" data-index="2">
+                <span class="command-index">③</span>
+                <div class="control-group">
+                    <label>方向</label>
+                    <select class="direction-select" data-var="方向3">
+                        <option value="顺" selected>顺</option>
+                        <option value="逆">逆</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label>格数</label>
+                    <input type="text" class="grid-input" data-var="v3" value="3" />
+                </div>
+                <span class="command-status" id="status2">⬜</span>
+            </div>
+        </div>
+
+        <div class="control-actions">
+            <button class="btn btn-sync" id="syncBtn">⟳ 同步到 GGB</button>
+            <button class="btn btn-reset" id="resetBtn">↺ 重置</button>
+        </div>
+        <div class="hint-text" id="hintText">调整方向与格数，点击同步</div>
+    </div>
+
+    <!-- ===== GeoGebra ===== -->
+    <div class="ggb-panel">
+        <div id="ggb-container"></div>
+    </div>
+</div>
+
+<script src="https://ggb123.cn/apps/deployggb.js"></script>
+
+<script>
+    (function() {
+        // ============================================================
+        //  ggbBase64 数据
+        // ============================================================
+        var base64String = 'UEsDBBQACAgIAGBxJV0AAAAAAAAAAAAAAAAWAAAAZ2VvZ2VicmFfamF2YXNjcmlwdC5qc0srzUsuyczPU0hPT/LP88zLLNHQVKiu5QIAUEsHCEXM3l0aAAAAGAAAAFBLAwQUAAgICABgcSVdAAAAAAAAAAAAAAAAFwAAAGdlb2dlYnJhX2RlZmF1bHRzMmQueG1s7VpLb+M2ED53f4WgU3uILcpWbAfxLrIBigbIZosmKHqlpbHMhiJVkYql/PpSpC3JsRUn1voRtD6YGooPzTcPcoa8/JJF1HqCRBDOxjbqOLYFzOcBYeHYTuX0bGh/+fzpMgQewiTB1pQnEZZj2ytalv28Tr8zckednm3hOB7bPsVCEN+2Yopl0WVsB7aVCXLB+B2OQMTYh3t/BhG+5T6WepCZlLG46Hbn83lnOV+HJ2FXDSm6mQi6YSg7qlQjRZSJsb14uFADm+6L3vOe7uc6Dur+9e3WTHRGmJCY+WArfgKY4pRKoR6BQgRMWjKPYWxPU+YXn8OecGJbFE+AFvMs2o/tc091/+lSzPjc4pO/wVd1MkmhbKuJbtFGvb7mlCdWMrZdp29bClEF2kT/YxrPsHrqDDzTmuIcEusJ0+K1rsGp5L4eQNdOMRWwbKum+sYDMG/6i/aMRBpKS0hQQkD2gidHyyHXIi1HuewuGF+DgBIhS3ZuNVGyj3rOOv9mzNcBcDT7yHkJwBk6DvtqFMLgXuYULDkj/iMDoTTKq3UqHn4jQQCFYZg+MSdM3pPnxcxevVYPtcIACym8rG6GPeY0Dzkrcfx9SZfgDwz27/xwiytjIzJXz4Oh+bJm7a3hU5ce8npafh5a018lUv1D/ZGD0DlyT02dC1wLyFaANRUVsmjvyL5mFmteYV8YKnFtsQrlIpO6Li8gMi+BBZtfNaO/9KclDtdp8lSHvtd3NriUvUNXjXkUb7JJdUgUUzLNrzlMp8QnCkOx+q2v6bjyQDUFV5T18zQB+KXuu3fDeTDQQBeFQtr1vIOqKdoM97scsc95EggrG9t3+M628kX5bMr3AxtArCxBNVpBF+2ELkLLlXGk8UXoAPi+E93+AdH9Xl/w1GKyE6auZzAtykPp7Alr7A37A0KyspVAvf+R/eHa2m+9jp0Enhoig5wo/lU4x9XSBNnR4W5yvef/NdeL2sNLuZ+KKswzVAnpcNteoSFQcIca0qJQiPbQAQFt2JjhNCOU4CRfH7/llu21CLoWbtyuhhruMXa7ewgU2m944R+24mX0/le1aa3aAsKCKhG9X9KVEHbbrB1YCMcWAU8lLSa9YRISATqOE2u8PALED2qi7+whwUwU2b6XIdZuQWUrHdiWx3N32wA1LtYd9+TyeGuhd5399nuVj2cArcPsBOevOZXdUsMfG9PjOZUWzuFJTcsrt/DngqxyUh9ijd6/JDdEAsqRgyCYtZaBhKxaoR80UctUnaAAmlnxOSvOupYJTkOVzPRPkJfTcwtAQmDGLpU+OXqM3NEjPxsqQ5rKkaaeUenRFR8Jyawr0/rKNLtyTdEzRd8U3tZTGC3LWGl5zdG/8A79HTN9J3+G8oGc/6moi4I3rAR/Y6haTtjY/pQoQBiOVAfzDYR9xf5jmPCUBWvs/xhPcaRz1WaoWBpBUvOTd0u6hMszaKnJ09UskqAkUFxERGndmVLHCGdaLfFEcJpKuPcTAFbdJDCgzUkgZ0XArT50SjIIypPqGU/IM2ey1CmrwPyK6isH2w3CfYtBOM6bfXqT/TdLqpLJTqLQJ9OlIK4MVYnBZN03Hl9vk46zEM55xx320NDrOQM0GHnD8zcKCw0rYZkXLWXV5LzcTc4LJ36Veus1CnD9FkMrES4zLg4a9L2eO3I9NBr11YO3o6VNOKeAq7jv65KuHaysmVqTA3rL5Y79Z/38GfiPE56t6Mb7ot9fy4rqMs9uW7PW7G47fNZMrjU98Alzt3ZHqru8j/X5079QSwcI4LyDWzMFAAAyJgAAUEsDBBQACAgIAGBxJV0AAAAAAAAAAAAAAAAXAAAAZ2VvZ2VicmFfZGVmYXVsdHMzZC54bWztWM1y2zYQPjdPgcE9JEGRtOkxk9Gkh3YmyTSTS68wuZLQkgADQKLoV+s79JkKYmGZTuRxrDqeeqY6cPG3u8D37S5IXb7ddy3ZgTZCyYqyKKEEZK0aIdcV3drV63P69s2ryzWoNVxpTlZKd9xWNJ9WHvTyKIvKtIwWlPC+r2jdcmNETUnfcjupVLShZG/EhVQfeQem5zV8rjfQ8feq5tYb2Vjbm4s4HoYhuvEXKb2OnUkT700Tr9c2ctJZ6lppKhoaF84wqgftYeH10iRh8e8f3qOj10Iay2UN1J2ngRXftta4JrTQgbTEjj1U1G1YwsK5aPkVtBX9zfd/piRoVHThzDoTP12ajRqIuvoDajdq9RYOSr4TT2vc9DvVKk10RcuSEgdqypy8CpK3/YZXNIlyXN/yETTZcWckwRG+tar2JvzoircGbtY6Zx9UAziT4eiKT9wFExFL8MeyMmGsYGlQFRI+27EFYjei/lOCMZPDgEFo/CKaBqagQB34IlHFTE8XHAY0ztRK6caQvdcc/fPaP4dwiss4gPwN3LWSop7B/au0LqYcoi4iSL3VO5gjz3JEPjhU6FGhS4U+1TDtmOxwbodzu7AfHBxwcLg+gPxYKlPmqWQJ81SyMp1ReR/m/5paLkXnc8VRAL0/5oEwF7ejz9m5lWMs549juefa5avVLplxXqxB7hxOSjvGE7+JMUHOsbdnGAfM967ZwbTbuxZ7ssTVS1y2TFEsUGQo8gcDh++FmdIy0LQM3VmsJIuTsjTxzCae1+SW1R/FoQuX52WRhDa4s/791wPZOSVgzbUFI7icpem7aeJrvIuXgPfTo30/fL1qxw00Wsnb62Q2dIvdItwop1D9WLxZvvCI5+xryKMsFK68LJKsyJ7sSnocB/fj+WXLGx/C4YCfbvpzJNlJUZgyrOjZmUdlEgdYiqycfmcFy89ZlrKnguUpElt0fStqYb+rOCfHivM0iDV4RHGdnlyxybJAcYbiHEX5YDU3W71yb4THSk2YuktydhrJTu9osYnOvjfWbw3/wHLDTis3EuwBgI9Te45Y/n+BebjAHCvYo7stRXMHTPaM1Tp8NJx/G7MvEUwtTHcXSvZsUKaswO8vLPFl8bKxXOp6IzpogN99lXCfG8+H6P2X5n8P0Xj2zR/f/L/w5tU/UEsHCCNwTodqAwAAAhEAAFBLAwQUAAgICABgcSVdAAAAAAAAAAAAAAAADAAAAGdlb2dlYnJhLnhtbO0cbY8bxfkz/IqRq0Y+sH07M/vK3YGOCLWRQkA5iioCH9besW97612zu/b5AkhJKwgUqlKEoGqRCipt+BAoaqWWdyR+SsRdkk/8hT4zs7te79o+710SCCSJvTszz8w87y8zhvWHxn0PjVgYuYG/UcMtpYaY3wkc1+9t1IZxt2nWHnrw3vUeC3qsHdqoG4R9O96oaRwym6e11JZFrBatIXsw2Kh1PDuK3E4NDTw75lM2ak4Nuc5GzdLajmkSrcnattFUNeI0babbTVXvOLrOcMfRujU0jtwH/OCM3WfRwO6wrc4269ung44di+2243gQPbC6uru720oxawVhbxU2j1bHkbPa67Vb8ISV+p4fbdSSlwdgYTk9mb1LxTyiKHj114+elhs1XT+Kbb/Dapzyofvgvfes77q+E+yiXdeJtzdqhqnX0DZze9vACkMxaqscZgDsGLBO7I5YBDNzTUF63B/UBJjt83H5gryMqhpy3JHrsJDLwcTEMgzFsgjVdRWTGgpCl/lxAov5juur2VIjl+1mL2I3jc+Jg8Br27Cggp5HGGkKfBC2UAPpBvQQhDWkQo8JPQaivE/DKqKIg2CKVBWeKu/GOozwYfjWNAVhDCOIKIgQRDAiFJqahjQAM/hcArC6JdZT4MOhASP4UN5HKXxEH1XhQ/gbLKTJZQAPjeriTRPfJp8Du2iE0yGGoE+1YDveoRkYUcAE2oaCYF3KN8GCGlVB/B9GKt+EGIiYSKwq1leARyM3ctse26h1bS9ioKV+NwTFy9pRvOcxwcSkYyIx3IC/AOGeB3BNAYuQagIjitLgHx0+KgysTslGnZYMCEIByhr8geWDI6vrckiRfQqVDyIfqnxoEkaV01UJKmlVVAmj0uMSmZJIlyfRzJGIOQkgEI67eFDEscYCe/5Qk6Yum0LfFKwkvSb/sngDOKKb4uWYFNEjUIRze8bhcOGWcnyyY7afoeNl96ukmnM3BPMDSdjtjdrm6V888vDZzaXJPSaPUwSwluOwpjTEP/EpbEiPRXD1/fQpK7zNxKqKZdwUcjU6Q4ENvqdW3NNQZrod+cTJ83YIYX01C1cJPija5pCJWcWsH3EMqYUMinSSxS6dh5YkgBkEGRoy9FwYa/BApmuTWMYjmTkVyzRzOqDpvNMQ0RH247FIRjaipsGtkYS350vhDeKQOglFgCBfCiMEAVS4qTQmARYki0pE44GJgCODsEiQzh3jnAAF2VMQuRlnt5k3SGUgBOv6g2E8xblO30lf42CQvApYJ+jsPFzgM7OjeAIDycQkXyk0hag8u808SAu3uPjRyPa41YjFu4Efp4LX5Voia1pnw47nOq7tPwnyTnXxzLDfZiESr0GSydyzzqdn2ZWOJ9kVV3AB0QmC0Nnai0A70PgpFsJcapAWMVVNhzyAqirlJr0nh4hptrBOLFVVDR5ZQDM7NldqTWtholrZH1D4vTlDpi53ZqMtFsdAeoTsMYsyQ+iF3KxyjVPRw4E36RoErh+ftAfxMBTpNDjlkBO16fc8JtgoBAs5Z2enHYy3BAeJLtd6Ym/A45PEoN07GXhBiMDmiKYBQPJsy6eA4ahNoEwJZAoYmjCZr5uBYFMRMNiwBBBOyQUhS+wSanFKqZJu5EZIthN9Sh0i1xCexw59Nz6dNmK3szMhlk+QGhDl9TNbE9+sNddXC9q3vsNCn3lSlXwQ5zAYRlKPc0Y1jNjjdry96TtnWQ9M73Gb+74YlpagOZNiHbcPE2U/Sejgov0VoCp7HdYLWUqiJ+qUnPmA6kWDkNlOtM1YnPFXKnrBytZXU/TXIZp7THj1vusLKfTtsZRGzAYpfNQJ3QFXWtQGB73DJmrpuBFfwcnRzTkSAWkd7m2AuzHnLNRyw3g7CEVlYse8h9v0GFCOeNmXysYHEUBvoqzrzGN9KFRQLBTYH/ZZyCvBCbBwBLY3TMhLVJwLEQXt34DHKQp/wnPR8WjgsBzTQdByx9nIkQQ5sgxypIgcubXI0Sqco7eUcwv35opV3D3R1sjjJeu0KoIbtttR4A1jKN3BAPxJ6S5DT+LoMc++OTzwYQ+QwjCx645zugrq554Ha81MTxj7pjSlKfoypxVvg3OAsph7Lp7xCIKSl1+6jsNkOA0GdseN9zhQFSHDeOZBpf9UhPeEb9sbbANOSgvIEn+waikY65ikItjjcS/Hu4JQcOpDwK8IQ5T2jHNEDGAREUsmpru0EOMKEsRVJUiEBKmh35VgWYJKS8mESA8VYslNhBW8RHgrnUQn6Pdt30G+KAdOumHHY7VJKmorG7W60kDKCrASc1wkw4dxOnpSrpisUyIGolCOlJO1EuJJwSHHEyrYiDucZUW7pCCVBTqpLaOShpnkjs/6coFIpis8pXa7QKUcdXvMHwFpAeQXY0WssaeIlc/L1hiL1h4WrfM40zFQsNAdo00JtinHN8lGrQnp3CYVszZV+dCyJGKeLLfYs0MmTzynpFmvKy0T3YfCFfjqBFHdUr75GDVRfQfa1jcfr6ysNNAUUOT6M4ASjdiBB5HyAAwpYGqrnKFFPfHoYkXx3CjO9MCjZUVZ3viFB7uNOiJPinllwPN9uZKW7y2VV3ZWLkzlg/NF2eP9RUmG6H6ktLQ1xIWTiKMeps2iALqL+R8le2SmeCxTTUuaH5yxuv2B5wJMxh6P++1TPi8HmMiVywXEDmMDXrs95j8R2n7ELz+KlUMU22Fezg7r2kMv2YX5zrwhURhEPNyCIEW8bdKWokN80i3LMHWTmlR/pIkNcBSHqsnh3lsqTEk1OlV8eGcpxbjrvDPnjUmLaDfPgSfO4Fwd7F868KZwzvcXPHiYeO4Zo8LBcw+v5ePA7GWmwOat90zFWKBWiQXq3VhwuFac6p4D1M/tNJD2DLr6yrsIzP4maoq1lKJYh+rJPEUpaYhWRUO0n7iGLK4fTqnFAuKMfaZSCVG1RFpQ2wLYcOx6rh3uTcfQCvSUTk3uLHrawzgO/Awx2cSHRNXZGjzr5LigxblzZsxLVoA2DQmMJyqfHTnPYc5j3W7EYp6n8FSEB1SVLrIJcWBQTJLmcOqe9V6vLc825cAWi5/kwq3zUptnLyd+NnbW4MteQ9lYPD2wxROwzVRiMCoklGTBHXsg5ChWv3HpD9e+/ChBU1xzgHZ1J1dhYJSPyoPc9PojzRUOsbuZciV3jFx1eWCnmLderqns7LVTXSFkdMKL15DaKEief9+PVyTo2aF/0uOXBGLFumQvnSXhbz959dtPLhx8+I/bJeQjVqvfg5QpleZLiX47xJxI2ZVSPtGL15RG0VJXZonw4I0PD9786ubIr3T4tv/Rawcvv55ecQj9u/rK3xBGV1++jGL5PuNcrh0EHrMnsk+XKQSjXGiorhHFO74jpiTp/WN6cDszKM3hCynyhRyJL6V7lzudL7TIF3okvpSSlzuYLy9+cON3H0iyisxRl2FIfv4dypXp4uxUt1CWTbOIlz4nnh0GMc9ZcJea1hrKQ3z3xcX9f7107d2L+//79/XLf7/x5kUJLaslKPESFWog2X/1nRfRtStXKIS6dIHX9i+9tP/+pfzsBspmksJMUp6ZrFeaigtT8cypZHpqpg5KNvuP/0ESev+LC/uXX4XJ13776f6lz0/YgyBay0K3bM5aKkNE8FBT1LUUnYO3X73+5ZVvP/mw1WrNmklmziRLzKQzZ9I5MxNQ8f2M/FMqcK/9/r8HFy4evHXp4J0ri0vdmI0npe7UtCUyS3E+a96i07gjBObkpPRxXujyfKRJW4aqa7phYMOydGKJ7ERtYYpN1cIKJYahG6o4/cQVbW+ifNLylMyM8rpUj9F9iNIWXSkpC+/lBxhzICj/PW9LXwChNvjvXCHZnakC17/+6/5n/1ws/GLtm8wpOMslch458eDPX117/7PEV0sFPbjwuRz77ou/yB4gSPbAi+z5eeKGyi59Sjmn9lj69uAQ7ZyRFB9fP3FLzX6+e4iCKi3LNKlGLKxbRKW6KRNo6CemTolC1eRbo7O1tCyLg7c+3X/9T3hKDDfe+2w5JqeTj3HidUyzLzCItIiR+2vp8h6DtBQVm5O/pBp3yHG4M6Po/nFxhx6HO8e6W/0hcecQ/59YivDERUbJu9Kmj1dkUPBxyT2PcDXXPCpVgk16JIzJQoxJijEpY0wqYlyq0ZqH/D5kDsZ0IcY0xZiWMT7kRwEljEvVU5nHZZvxUmfy3AgC/ggi+4i+UMvfJJTtZvqCQTJqqbuDuT80+t5vCaZF+ZQ7KN4U8+ubQXJVPJAy88padv3yGxDl919++/p7HyyW3hQPp6b9CLg5wzVDJiWITCN7nuQ6XpmhZUX9zi1RskyjAgZkNgY8s8v3kEo4lb2FqlXAiS6LU7GHVsKy7CGMqk5tTuEwqRrktaUir7cnFQO0tWk1sPX8eRG0jSl+Fk0rkkejvWpOMZt1WFVwc8ieom8R/eQQ+svhgPlOZeqTOdUros4wDGGMT07PriQf04KuLpdGTZSOrCyjibl1qwnkbBDbcfFe36NSGJNVv/m4xDePyuOSCu44m3KMXPBHcHO+jATUZSSgVpeAOk8CS1wQ/qQEoC0jAK26ALS7Aljy10VPQBV5Tqb1T4dCRu1g/Fx2XFSvQyoAHnOHx+6JmFayA6QXnnuaF6L5GRI+B/JCenyauqb6DgzilQYSHqmBuCAaSBynzfoVkVHWCb2KNug/bT1Yzf/3Yryd/l84Hrz3/1BLBwh3pgq21A0AAFJEAABQSwECFAAUAAgICABgcSVdRczeXRoAAAAYAAAAFgAAAAAAAAAAAAAAAAAAAAAAZ2VvZ2VicmFfamF2YXNjcmlwdC5qc1BLAQIUABQACAgIAGBxJV3gvINbMwUAADImAAAXAAAAAAAAAAAAAAAAAF4AAABnZW9nZWJyYV9kZWZhdWx0czJkLnhtbFBLAQIUABQACAgIAGBxJV0jcE6HagMAAAIRAAAXAAAAAAAAAAAAAAAAANYFAABnZW9nZWJyYV9kZWZhdWx0czNkLnhtbFBLAQIUABQACAgIAGBxJV13pgq21A0AAFJEAAAMAAAAAAAAAAAAAAAAAIUJAABnZW9nZWJyYS54bWxQSwUGAAAAAAQABAAIAQAAkxcAAAAA'
+        // ============================================================
+        //  引用
+        // ============================================================
+        var rows = document.querySelectorAll('.command-row');
+        var syncBtn = document.getElementById('syncBtn');
+        var resetBtn = document.getElementById('resetBtn');
+        var hintText = document.getElementById('hintText');
+        var container = document.getElementById('ggb-container');
+
+        var ggb = null;
+        var isReady = false;
+        var isSyncing = false;
+
+        // ============================================================
+        //  初始化 GGB
+        // ============================================================
+        function initGGB() {
+            var params = {
+                id: 'ggbApplet',
+                width: container.clientWidth || '100%',
+                height: container.clientHeight || 560,
+                showMenuBar: false,
+                showToolBar: false,
+                showAlgebraInput: false,
+                showResetIcon: true,
+                enableRightClick: false,
+                enableShiftDragZoom: true,
+                appName: 'classic',
+                borderColor: 'transparent',
+                allowUpscale: true,
+                useBrowserForJS: true,
+                ggbBase64: base64String,
+                appletOnLoad: function(api) {
+                    ggb = api;
+                    isReady = true;
+
+                    // ★★★ 隐藏网格和坐标轴 ★★★
+                    ggb.setGridVisible(false);
+                    ggb.setAxesVisible(false);
+
+                    console.log('✅ GGB 加载完成 (网格和坐标轴已隐藏)');
+                    hintText.textContent = '✅ GGB 已就绪，点击同步';
+                    hintText.className = 'hint-text success';
+
+                    initGGVars();
+                    setTimeout(syncToGGB, 500);
+                }
+            };
+
+            try {
+                var applet = new GGBApplet(params, true);
+                applet.inject(container);
+                console.log('⏳ 加载 GGB (Base64)...');
+            } catch (e) {
+                console.error('GGB 加载失败:', e);
+                hintText.textContent = '❌ GGB 加载失败，请刷新';
+                hintText.className = 'hint-text error';
+            }
+        }
+
+        // ============================================================
+        //  初始化 GGB 变量
+        // ============================================================
+        function initGGVars() {
+            if (!ggb) return;
+
+            try {
+                ggb.evalCommand('方向1 = "逆"');
+                ggb.evalCommand('方向2 = "逆"');
+                ggb.evalCommand('方向3 = "顺"');
+
+                ggb.evalCommand('v1 = 3');
+                ggb.evalCommand('v2 = 2');
+                ggb.evalCommand('v3 = 3');
+
+               
+          
+
+                
+
+                console.log('✅ GGB 变量已初始化');
+            } catch (e) {
+                console.warn('初始化变量时出错:', e);
+            }
+        }
+
+        // ============================================================
+        //  读取网页控件数据
+        // ============================================================
+        function getControlData() {
+            var data = [];
+            rows.forEach(function(row, idx) {
+                var select = row.querySelector('.direction-select');
+                var input = row.querySelector('.grid-input');
+                var dir = select ? select.value : '顺';
+                var val = parseFloat(input.value);
+                var grid = (isNaN(val) || val <= 0) ? 0 : val;
+
+                var dirVar = select ? select.dataset.var : '方向' + (idx + 1);
+                var valVar = input ? input.dataset.var : 'v' + (idx + 1);
+
+                data.push({
+                    index: idx,
+                    direction: dir,
+                    grid: grid,
+                    dirVar: dirVar,
+                    valVar: valVar,
+                    select: select,
+                    input: input,
+                    row: row,
+                    statusEl: document.getElementById('status' + idx)
+                });
+            });
+            return data;
+        }
+
+        // ============================================================
+        //  同步到 GGB
+        // ============================================================
+        function syncToGGB() {
+            if (isSyncing) return;
+            if (!ggb || !isReady) {
+                hintText.textContent = '⏳ GGB 未就绪，请稍候...';
+                hintText.className = 'hint-text';
+                return;
+            }
+
+            isSyncing = true;
+            syncBtn.disabled = true;
+
+            var data = getControlData();
+            var successCount = 0;
+
+            try {
+                data.forEach(function(item, idx) {
+                    var dirCmd = item.dirVar + ' = "' + item.direction + '"';
+                    ggb.evalCommand(dirCmd);
+
+                    var valCmd = item.valVar + ' = ' + item.grid;
+                    ggb.evalCommand(valCmd);
+
+                    var displayVar = 't' + (idx + 1);
+                   
+
+                    var angle = item.direction === '顺' ? item.grid * 30 : -item.grid * 30;
+                    var rad = angle * Math.PI / 180;
+                    var radius = item.grid * 2 + 1;
+                    var x = radius * Math.cos(rad + idx * 0.5);
+                    var y = radius * Math.sin(rad + idx * 0.5);
+
+                    var pointCmd = 'P' + (idx + 1) + ' = (' + x.toFixed(2) + ', ' + y.toFixed(2) + ')';
+                    ggb.evalCommand(pointCmd);
+
+                    var colors = [
+                        [255, 80, 80],
+                        [80, 255, 80],
+                        [80, 150, 255]
+                    ];
+                    ggb.evalCommand('SetColor(P' + (idx + 1) + ', ' + colors[idx][0] + ', ' + colors[idx][1] + ', ' + colors[idx][2] + ')');
+                    ggb.evalCommand('SetPointStyle(P' + (idx + 1) + ', 1)');
+                    ggb.evalCommand('SetPointSize(P' + (idx + 1) + ', 8)');
+
+                    ggb.evalCommand('SetCoords(t' + (idx + 1) + ', ' + (x + 0.8).toFixed(2) + ', ' + (y + 0.8).toFixed(2) + ')');
+
+                    item.row.classList.add('synced');
+                    item.row.classList.remove('active');
+                    if (item.statusEl) {
+                        item.statusEl.textContent = '✅';
+                        item.statusEl.className = 'command-status synced';
+                    }
+
+                    successCount++;
+                    console.log('✅ 已同步: ' + item.dirVar + '="' + item.direction + '", ' + item.valVar + '=' + item.grid);
+                });
+
+                try { ggb.refreshViews(); } catch(e) {}
+
+                hintText.textContent = '✅ 已同步 ' + successCount + ' 对命令到 GGB';
+                hintText.className = 'hint-text success';
+
+            } catch (e) {
+                console.error('同步失败:', e);
+                hintText.textContent = '❌ 同步失败: ' + e.message;
+                hintText.className = 'hint-text error';
+            }
+
+            isSyncing = false;
+            syncBtn.disabled = false;
+        }
+
+        // ============================================================
+        //  重置
+        // ============================================================
+        function resetAll() {
+            var defaultData = [
+                { dir: '逆', val: 3 },
+                { dir: '逆', val: 2 },
+                { dir: '顺', val: 3 }
+            ];
+
+            rows.forEach(function(row, idx) {
+                var select = row.querySelector('.direction-select');
+                var input = row.querySelector('.grid-input');
+                var statusEl = document.getElementById('status' + idx);
+
+                if (select) select.value = defaultData[idx].dir;
+                if (input) input.value = defaultData[idx].val;
+
+                row.classList.remove('active', 'synced');
+                if (statusEl) {
+                    statusEl.textContent = '⬜';
+                    statusEl.className = 'command-status';
+                }
+            });
+
+            if (ggb && isReady) {
+                try {
+                    defaultData.forEach(function(item, idx) {
+                        var dirVar = '方向' + (idx + 1);
+                        var valVar = 'v' + (idx + 1);
+                        var displayVar = 't' + (idx + 1);
+
+                        ggb.evalCommand(dirVar + ' = "' + item.dir + '"');
+                        ggb.evalCommand(valVar + ' = ' + item.val);
+                        ggb.evalCommand(displayVar + ' = "' + (idx + 1) + '① ' + item.dir + ' ' + item.val + '"');
+
+                        var angle = item.dir === '顺' ? item.val * 30 : -item.val * 30;
+                        var rad = angle * Math.PI / 180;
+                        var radius = item.val * 2 + 1;
+                        var x = radius * Math.cos(rad + idx * 0.5);
+                        var y = radius * Math.sin(rad + idx * 0.5);
+                        ggb.evalCommand('P' + (idx + 1) + ' = (' + x.toFixed(2) + ', ' + y.toFixed(2) + ')');
+                        ggb.evalCommand('SetCoords(t' + (idx + 1) + ', ' + (x + 0.8).toFixed(2) + ', ' + (y + 0.8).toFixed(2) + ')');
+                    });
+                    try { ggb.refreshViews(); } catch(e) {}
+                } catch (e) {
+                    console.warn('重置 GGB 时出错:', e);
+                }
+            }
+
+            hintText.textContent = '🔄 已重置';
+            hintText.className = 'hint-text';
+        }
+
+        // ============================================================
+        //  事件绑定
+        // ============================================================
+
+        rows.forEach(function(row, idx) {
+            var select = row.querySelector('.direction-select');
+            var input = row.querySelector('.grid-input');
+            var statusEl = document.getElementById('status' + idx);
+
+            var onControlChange = function() {
+                row.classList.remove('synced');
+                row.classList.add('active');
+                if (statusEl) {
+                    statusEl.textContent = '⬜';
+                    statusEl.className = 'command-status';
+                }
+                hintText.textContent = '✏️ 已修改，点击同步';
+                hintText.className = 'hint-text';
+            };
+
+            if (select) select.addEventListener('change', onControlChange);
+            if (input) input.addEventListener('input', onControlChange);
+
+            if (input) {
+                input.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                        syncToGGB();
+                    }
+                });
+            }
+        });
+
+        syncBtn.addEventListener('click', syncToGGB);
+        resetBtn.addEventListener('click', resetAll);
+
+        // ============================================================
+        //  窗口自适应
+        // ============================================================
+        window.addEventListener('resize', function() {
+            if (ggb && isReady) {
+                var rect = container.getBoundingClientRect();
+                try {
+                    ggb.setSize(rect.width, rect.height);
+                } catch(e) {}
+            }
+        });
+
+        // ============================================================
+        //  启动
+        // ============================================================
+        hintText.textContent = '⏳ 加载 GGB (Base64)...';
+        hintText.className = 'hint-text';
+        initGGB();
+
+        console.log('🎮 方向·格数 GGB 控制器已启动 (使用 Base64 数据)');
+        console.log('📌 对应 GGB 变量: 方向1/2/3, v1/v2/v3');
+
+    })();
+</script>
+
+</body>
+</html>
